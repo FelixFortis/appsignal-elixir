@@ -95,7 +95,11 @@ defmodule Mix.Tasks.Appsignal.DiagnoseTest do
 
     download_report = install_report["download"]
     assert is_binary(download_report["time"])
-    assert String.starts_with?(download_report["download_url"], "https://")
+    # download_url can be nil if the extension was cached and not downloaded
+    if download_report["download_url"] != nil do
+      assert String.starts_with?(download_report["download_url"], "https://")
+    end
+
     assert Enum.member?(valid_architectures, download_report["architecture"])
     assert Enum.member?(valid_targets, download_report["target"])
     assert download_report["musl_override"] == false
@@ -1143,7 +1147,8 @@ defmodule Mix.Tasks.Appsignal.DiagnoseTest do
   defp assert_output_contains_download_report(output) do
     assert String.contains?(output, "Download details")
     assert String.contains?(output, "  Download time: \"20")
-    assert String.contains?(output, "  Download URL: \"https://")
+    # download_url can be nil if the extension was cached and not downloaded
+    assert String.contains?(output, "  Download URL: ")
     assert output =~ ~r{Architecture: "(x86(_64)?|aarch64)"}
     assert output =~ ~r{Target: "[\w-]+"}
     assert String.contains?(output, "  Musl override: false")

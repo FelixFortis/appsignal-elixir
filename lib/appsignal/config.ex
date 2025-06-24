@@ -31,6 +31,7 @@ defmodule Appsignal.Config do
     instrument_tesla: true,
     log: "file",
     logging_endpoint: "https://appsignal-endpoint.net",
+    only_errors: false,
     request_headers: ~w(
       accept accept-charset accept-encoding accept-language cache-control
       connection content-length range
@@ -323,6 +324,7 @@ defmodule Appsignal.Config do
     "APPSIGNAL_LOG_LEVEL" => :log_level,
     "APPSIGNAL_LOG_PATH" => :log_path,
     "APPSIGNAL_LOGGING_ENDPOINT" => :logging_endpoint,
+    "APPSIGNAL_ONLY_ERRORS" => :only_errors,
     "APPSIGNAL_OTP_APP" => :otp_app,
     "APPSIGNAL_PUSH_API_ENDPOINT" => :endpoint,
     "APPSIGNAL_PUSH_API_KEY" => :push_api_key,
@@ -353,7 +355,7 @@ defmodule Appsignal.Config do
     APPSIGNAL_ENABLE_HOST_METRICS APPSIGNAL_SEND_SESSION_DATA APPSIGNAL_SKIP_SESSION_DATA
     APPSIGNAL_TRANSACTION_DEBUG_MODE APPSIGNAL_FILES_WORLD_ACCESSIBLE APPSIGNAL_SEND_PARAMS
     APPSIGNAL_ENABLE_MINUTELY_PROBES APPSIGNAL_ENABLE_STATSD APPSIGNAL_ENABLE_NGINX_METRICS
-    APPSIGNAL_ENABLE_ERROR_BACKEND APPSIGNAL_SEND_ENVIRONMENT_METADATA
+    APPSIGNAL_ENABLE_ERROR_BACKEND APPSIGNAL_SEND_ENVIRONMENT_METADATA APPSIGNAL_ONLY_ERRORS
     APPSIGNAL_INSTRUMENT_ECTO APPSIGNAL_INSTRUMENT_FINCH APPSIGNAL_INSTRUMENT_OBAN APPSIGNAL_INSTRUMENT_TESLA
   )
   @atom_keys ~w(APPSIGNAL_APP_ENV APPSIGNAL_OTP_APP)
@@ -473,6 +475,7 @@ defmodule Appsignal.Config do
     Nif.env_put("_APPSIGNAL_LOG_LEVEL", to_string(log_level(config)))
     Nif.env_put("_APPSIGNAL_LOG_FILE_PATH", to_string(log_file_path()))
     Nif.env_put("_APPSIGNAL_LOGGING_ENDPOINT", config[:logging_endpoint] || "")
+    Nif.env_put("_APPSIGNAL_ONLY_ERRORS", to_string(config[:only_errors]))
     Nif.env_put("_APPSIGNAL_PUSH_API_ENDPOINT", config[:endpoint] || "")
     Nif.env_put("_APPSIGNAL_PUSH_API_KEY", config[:push_api_key] || "")
 

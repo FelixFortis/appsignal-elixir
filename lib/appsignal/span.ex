@@ -328,6 +328,44 @@ defmodule Appsignal.Span do
 
   def do_add_error(nil, _name, _message, _stacktrace), do: nil
 
+  # Check if a span has errors
+  @spec has_errors?(t() | nil) :: boolean()
+  defp has_errors?(%Span{reference: reference}) do
+    try do
+      case Nif.span_to_json(reference) do
+        {:ok, json_string} ->
+          case Jason.decode(json_string) do
+            {:ok, %{"error" => error}} when not is_nil(error) ->
+              true
+
+            {:ok, span_data} ->
+              # Check if there are any error events in the span
+              Map.get(span_data, "events", [])
+              |> Enum.any?(fn event ->
+                Map.get(event, "name") == "error"
+              end)
+
+            _ ->
+              false
+          end
+
+        _ ->
+          false
+      end
+    rescue
+      _ -> false
+    end
+  end
+
+  defp has_errors?(nil), do: false
+
+  # Check if only_errors mode is enabled
+  @spec only_errors_enabled?() :: boolean()
+  defp only_errors_enabled? do
+    config = Application.get_env(:appsignal, :config, [])
+    !!config[:only_errors]
+  end
+
   @spec close(t() | nil) :: t() | nil
   @doc """
   Close an `Appsignal.Span`.
@@ -337,7 +375,13 @@ defmodule Appsignal.Span do
       |> Span.close()
   """
   def close(%Span{reference: reference} = span) do
-    :ok = @nif.close_span(reference)
+    if only_errors_enabled?() && !has_errors?(span) do
+      # In only_errors mode, silently drop spans without errors
+      :ok
+    else
+      :ok = @nif.close_span(reference)
+    end
+
     span
   end
 
@@ -352,9 +396,15 @@ defmodule Appsignal.Span do
       |> Span.close(span, :os.system_time())
   """
   def close(%Span{reference: reference} = span, end_time) do
-    sec = :erlang.convert_time_unit(end_time, :native, :second)
-    nsec = :erlang.convert_time_unit(end_time, :native, :nanosecond) - sec * 1_000_000_000
-    :ok = @nif.close_span_with_timestamp(reference, sec, nsec)
+    if only_errors_enabled?() && !has_errors?(span) do
+      # In only_errors mode, silently drop spans without errors
+      :ok
+    else
+      sec = :erlang.convert_time_unit(end_time, :native, :second)
+      nsec = :erlang.convert_time_unit(end_time, :native, :nanosecond) - sec * 1_000_000_000
+      :ok = @nif.close_span_with_timestamp(reference, sec, nsec)
+    end
+
     span
   end
 

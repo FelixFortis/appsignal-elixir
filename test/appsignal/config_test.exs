@@ -922,6 +922,13 @@ defmodule Appsignal.ConfigTest do
              ) == default_configuration() |> Map.put(:otp_app, :appsignal_phoenix_example)
     end
 
+    test "only_errors" do
+      assert with_env(
+               %{"APPSIGNAL_ONLY_ERRORS" => "true"},
+               &init_config/0
+             ) == default_configuration() |> Map.put(:only_errors, true)
+    end
+
     test "name" do
       assert with_env(
                %{"APPSIGNAL_APP_NAME" => "AppSignal test suite app"},
@@ -1263,6 +1270,7 @@ defmodule Appsignal.ConfigTest do
           log_path: "/tmp",
           logging_endpoint: "https://push.staging.lol",
           name: "AppSignal test suite app",
+          only_errors: false,
           running_in_container: false,
           working_dir_path: "/tmp/appsignal-deprecated",
           working_directory_path: "/tmp/appsignal",
@@ -1304,6 +1312,7 @@ defmodule Appsignal.ConfigTest do
           assert Nif.env_get("_APPSIGNAL_LOG_LEVEL") == ~c"trace"
           assert Nif.env_get("_APPSIGNAL_LOG_FILE_PATH") == ~c"/tmp/appsignal.log"
           assert Nif.env_get("_APPSIGNAL_LOGGING_ENDPOINT") == ~c"https://push.staging.lol"
+          assert Nif.env_get("_APPSIGNAL_ONLY_ERRORS") == ~c"false"
           assert Nif.env_get("_APPSIGNAL_PUSH_API_ENDPOINT") == ~c"https://push.staging.lol"
 
           assert Nif.env_get("_APPSIGNAL_PUSH_API_KEY") ==
@@ -1446,6 +1455,7 @@ defmodule Appsignal.ConfigTest do
       ignore_namespaces: [],
       log: "file",
       logging_endpoint: "https://appsignal-endpoint.net",
+      only_errors: false,
       request_headers: ~w(
         accept accept-charset accept-encoding accept-language cache-control
         connection content-length range
