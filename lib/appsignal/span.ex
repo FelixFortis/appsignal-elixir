@@ -33,7 +33,7 @@ defmodule Appsignal.Span do
 
   """
   def create_root(namespace, pid, nil) do
-    if Config.active?() do
+    if Config.active?() and should_sample?() do
       {:ok, reference} = @nif.create_root_span(namespace)
 
       %Span{reference: reference, pid: pid}
@@ -41,7 +41,7 @@ defmodule Appsignal.Span do
   end
 
   def create_root(namespace, pid, start_time) do
-    if Config.active?() do
+    if Config.active?() and should_sample?() do
       sec = :erlang.convert_time_unit(start_time, :native, :second)
       nsec = :erlang.convert_time_unit(start_time, :native, :nanosecond) - sec * 1_000_000_000
       {:ok, reference} = @nif.create_root_span_with_timestamp(namespace, sec, nsec)
@@ -71,7 +71,7 @@ defmodule Appsignal.Span do
 
   """
   def create_child(%Span{reference: parent}, pid, nil) do
-    if Config.active?() do
+    if Config.active?() and should_sample?() do
       {:ok, reference} = @nif.create_child_span(parent)
 
       %Span{reference: reference, pid: pid}
@@ -79,7 +79,7 @@ defmodule Appsignal.Span do
   end
 
   def create_child(%Span{reference: parent}, pid, start_time) do
-    if Config.active?() do
+    if Config.active?() and should_sample?() do
       sec = :erlang.convert_time_unit(start_time, :native, :second)
       nsec = :erlang.convert_time_unit(start_time, :native, :nanosecond) - sec * 1_000_000_000
 
@@ -364,5 +364,20 @@ defmodule Appsignal.Span do
   def to_map(%Span{reference: reference}) do
     {:ok, json} = Nif.span_to_json(reference)
     Jason.decode!(json)
+  end
+
+  # This private function determines whether a span should be sampled (i.e., recorded and sent to AppSignal)
+  # based on the configured sample rate.
+  #
+  # - It fetches the AppSignal config from the application environment.
+  # - It reads the :span_sample_rate value from the config, defaulting to 1.0 (100%) if not set.
+  # - If the sample rate is 1.0 or higher, it always samples (returns true).
+  # - If the sample rate is less than 1.0, it uses :rand.uniform() to randomly sample according to the rate.
+  defp should_sample? do
+    config = Application.get_env(:appsignal, :config, %{})
+    sample_rate = Map.get(config, :span_sample_rate, 1.0)
+
+    # Always sample if rate is 1.0 or greater (100%+)
+    sample_rate >= 1.0 or :rand.uniform() <= sample_rate
   end
 end

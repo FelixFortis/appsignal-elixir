@@ -674,6 +674,10 @@ defmodule Appsignal.ConfigTest do
     test "revision" do
       assert %{revision: "03bd9e"} = with_config(%{revision: "03bd9e"}, &init_config/0)
     end
+
+    test "span_sample_rate" do
+      assert %{span_sample_rate: 0.5} = with_config(%{span_sample_rate: 0.5}, &init_config/0)
+    end
   end
 
   describe "using the system environment" do
@@ -1051,6 +1055,13 @@ defmodule Appsignal.ConfigTest do
                %{"APP_REVISION" => "03bd9e"},
                &init_config/0
              ) == default_configuration() |> Map.put(:revision, "03bd9e")
+    end
+
+    test "span_sample_rate" do
+      assert with_env(
+               %{"APPSIGNAL_SPAN_SAMPLE_RATE" => "0.1"},
+               &init_config/0
+             ) == default_configuration() |> Map.put(:span_sample_rate, 0.1)
     end
   end
 
@@ -1454,6 +1465,7 @@ defmodule Appsignal.ConfigTest do
       send_params: true,
       send_session_data: true,
       skip_session_data: false,
+      span_sample_rate: 1.0,
       transaction_debug_mode: false,
       instrument_absinthe: true,
       instrument_ecto: true,
