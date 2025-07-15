@@ -1066,7 +1066,6 @@ defmodule Appsignal.ConfigTest do
                %{"APPSIGNAL_SPAN_SAMPLE_RATE" => "0.1"},
                &init_config/0
              ) == default_configuration() |> Map.put(:span_sample_rate, 0.1)
-      end
     end
     
     test "nginx_port" do
