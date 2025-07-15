@@ -38,6 +38,7 @@ defmodule Appsignal.Config do
     report_oban_errors: "all",
     send_environment_metadata: true,
     send_params: true,
+    span_sample_rate: 1.0,
     transaction_debug_mode: false
   }
 
@@ -334,6 +335,7 @@ defmodule Appsignal.Config do
     "APPSIGNAL_SEND_PARAMS" => :send_params,
     "APPSIGNAL_SEND_SESSION_DATA" => :send_session_data,
     "APPSIGNAL_SKIP_SESSION_DATA" => :skip_session_data,
+    "APPSIGNAL_SPAN_SAMPLE_RATE" => :span_sample_rate,
     "APPSIGNAL_STATSD_PORT" => :statsd_port,
     "APPSIGNAL_TRANSACTION_DEBUG_MODE" => :transaction_debug_mode,
     "APPSIGNAL_WORKING_DIRECTORY_PATH" => :working_directory_path,
@@ -364,7 +366,7 @@ defmodule Appsignal.Config do
     APPSIGNAL_IGNORE_NAMESPACES APPSIGNAL_DNS_SERVERS
     APPSIGNAL_FILTER_SESSION_DATA APPSIGNAL_REQUEST_HEADERS
   )
-  @float_keys ~w(APPSIGNAL_CPU_COUNT)
+  @float_keys ~w(APPSIGNAL_CPU_COUNT APPSIGNAL_SPAN_SAMPLE_RATE)
 
   defp load_from_environment do
     %{}

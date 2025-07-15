@@ -68,6 +68,38 @@ defmodule AppsignalSpanTest do
     end
   end
 
+  describe ".create_root/2 with span_sample_rate of 0.0" do
+    setup do
+      with_config(%{span_sample_rate: 0.0}, fn ->
+        [span: Span.create_root("http_request", self())]
+      end)
+    end
+
+    test "returns nil", %{span: span} do
+      assert span == nil
+    end
+
+    test "does not create a root span through the Nif" do
+      assert :error = Test.Nif.get(:create_root_span)
+    end
+  end
+
+  describe ".create_root/2 with span_sample_rate of 1.0" do
+    setup do
+      with_config(%{span_sample_rate: 1.0}, fn ->
+        [span: Span.create_root("http_request", self())]
+      end)
+    end
+
+    test "returns a span", %{span: span} do
+      assert %Span{} = span
+    end
+
+    test "creates a root span through the Nif" do
+      assert [{"http_request"}] = Test.Nif.get!(:create_root_span)
+    end
+  end
+
   describe ".create_root/3, when passing a start_time" do
     setup do
       [span: Span.create_root("http_request", self(), 1_588_937_136_283_541_000)]
@@ -142,6 +174,45 @@ defmodule AppsignalSpanTest do
 
     test "does not create a root span through the Nif" do
       assert :error = Test.Nif.get(:create_child_span)
+    end
+  end
+
+  describe ".create_child/3 with span_sample_rate of 0.0" do
+    setup do
+      with_config(%{span_sample_rate: 1.0}, fn ->
+        # Create parent with full sampling
+        parent = Span.create_root("http_request", self())
+
+        with_config(%{span_sample_rate: 0.0}, fn ->
+          [span: Span.create_child(parent, self()), parent: parent]
+        end)
+      end)
+    end
+
+    test "returns nil", %{span: span} do
+      assert span == nil
+    end
+
+    test "does not create a child span through the Nif" do
+      # The parent creation will be recorded, but not the child
+      assert Test.Nif.get(:create_child_span) == :error
+    end
+  end
+
+  describe ".create_child/3 with span_sample_rate of 1.0" do
+    setup do
+      with_config(%{span_sample_rate: 1.0}, fn ->
+        parent = Span.create_root("http_request", self())
+        [span: Span.create_child(parent, self()), parent: parent]
+      end)
+    end
+
+    test "returns a span", %{span: span} do
+      assert %Span{} = span
+    end
+
+    test "creates a child span through the Nif", %{parent: %Span{reference: parent}} do
+      assert Test.Nif.get!(:create_child_span) == [{parent}]
     end
   end
 
