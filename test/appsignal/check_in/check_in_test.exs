@@ -2,26 +2,13 @@ defmodule Appsignal.CheckInTest do
   use ExUnit.Case
   alias Appsignal.CheckIn
   alias Appsignal.CheckIn.Cron
-  alias Appsignal.CheckIn.Cron.Event
-  alias Appsignal.FakeTransmitter
-  import AppsignalTest.Utils, only: [with_config: 2]
+  alias Appsignal.CheckIn.Event
+  alias Appsignal.FakeScheduler
+  import AppsignalTest.Utils, only: [until: 1]
 
   setup do
-    start_supervised!(FakeTransmitter)
+    start_supervised!(FakeScheduler)
     :ok
-  end
-
-  describe "start/1 and finish/1, when AppSignal is not active" do
-    test "it does not transmit any events" do
-      cron = Cron.new("cron-checkin-name")
-
-      with_config(%{active: false}, fn ->
-        Cron.start(cron)
-        Cron.finish(cron)
-      end)
-
-      assert [] = FakeTransmitter.transmitted_payloads()
-    end
   end
 
   describe "start/1" do
@@ -31,7 +18,7 @@ defmodule Appsignal.CheckInTest do
 
       assert [
                %Event{identifier: "cron-checkin-name", kind: :start, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
     end
   end
 
@@ -42,7 +29,7 @@ defmodule Appsignal.CheckInTest do
 
       assert [
                %Event{identifier: "cron-checkin-name", kind: :finish, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
     end
   end
 
@@ -53,7 +40,7 @@ defmodule Appsignal.CheckInTest do
       assert [
                %Event{identifier: "cron-checkin-name", kind: :start, check_in_type: :cron},
                %Event{identifier: "cron-checkin-name", kind: :finish, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
 
       assert "output" == output
     end
@@ -65,7 +52,7 @@ defmodule Appsignal.CheckInTest do
 
       assert [
                %Event{identifier: "cron-checkin-name", kind: :start, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
     end
   end
 
@@ -75,7 +62,79 @@ defmodule Appsignal.CheckInTest do
 
       assert [
                %Event{identifier: "cron-checkin-name", kind: :finish, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
+    end
+  end
+
+  describe "heartbeat/1" do
+    test "transmits a heartbeat event" do
+      CheckIn.heartbeat("heartbeat-name")
+
+      assert [
+               %Event{identifier: "heartbeat-name", check_in_type: :heartbeat}
+             ] = FakeScheduler.scheduled()
+    end
+  end
+
+  describe "heartbeat/2, with continuous: true" do
+    test "continuously transmits heartbeat events" do
+      CheckIn.heartbeat("heartbeat-name", continuous: true)
+
+      until(fn ->
+        assert [
+                 %Event{identifier: "heartbeat-name", check_in_type: :heartbeat}
+               ] = FakeScheduler.scheduled()
+      end)
+
+      until(fn ->
+        assert [
+                 %Event{identifier: "heartbeat-name", check_in_type: :heartbeat},
+                 %Event{identifier: "heartbeat-name", check_in_type: :heartbeat}
+               ] = FakeScheduler.scheduled()
+      end)
+    end
+
+    test "is linked to the caller process" do
+      CheckIn.heartbeat("timer", continuous: true)
+
+      {:ok, agent} =
+        Agent.start(fn ->
+          CheckIn.heartbeat("agent", continuous: true)
+        end)
+
+      until(fn ->
+        assert %{"timer" => 2, "agent" => 2} = FakeScheduler.identifier_count()
+      end)
+
+      Process.exit(agent, :kill)
+
+      until(fn ->
+        assert %{"timer" => 4, "agent" => 2} = FakeScheduler.identifier_count()
+      end)
+    end
+  end
+
+  describe "Appsignal.CheckIn.Heartbeat" do
+    test "can be added to a supervisor" do
+      CheckIn.heartbeat("timer", continuous: true)
+
+      {:ok, supervisor} =
+        Supervisor.start_link(
+          [
+            {Appsignal.CheckIn.Heartbeat, "supervisor"}
+          ],
+          strategy: :one_for_one
+        )
+
+      until(fn ->
+        assert %{"timer" => 2, "supervisor" => 2} = FakeScheduler.identifier_count()
+      end)
+
+      Supervisor.stop(supervisor)
+
+      until(fn ->
+        assert %{"timer" => 4, "supervisor" => 2} = FakeScheduler.identifier_count()
+      end)
     end
   end
 
@@ -85,7 +144,7 @@ defmodule Appsignal.CheckInTest do
 
       assert [
                %Event{identifier: "heartbeat-name", kind: :finish, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
     end
 
     test "forwards heartbeat/2 to CheckIn.cron/2" do
@@ -94,7 +153,7 @@ defmodule Appsignal.CheckInTest do
       assert [
                %Event{identifier: "heartbeat-name", kind: :start, check_in_type: :cron},
                %Event{identifier: "heartbeat-name", kind: :finish, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
 
       assert "output" == output
     end
@@ -107,7 +166,7 @@ defmodule Appsignal.CheckInTest do
       assert [
                %Event{identifier: "heartbeat-name", kind: :start, check_in_type: :cron},
                %Event{identifier: "heartbeat-name", kind: :finish, check_in_type: :cron}
-             ] = FakeTransmitter.transmitted_payloads()
+             ] = FakeScheduler.scheduled()
     end
   end
 end

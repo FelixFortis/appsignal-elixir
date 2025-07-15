@@ -3,14 +3,49 @@ defmodule Appsignal.Transmitter do
 
   require Logger
 
-  def request(method, url, headers \\ [], body \\ "") do
-    http_client = Application.get_env(:appsignal, :http_client, :hackney)
-    :application.ensure_all_started(http_client)
+  def request_standalone(method, url, headers \\ [], body \\ "") do
+    :application.ensure_all_started(:telemetry)
 
-    http_client.request(method, url, headers, body, options())
+    http_client = Application.get_env(:appsignal, :http_client, Finch)
+    name = :"AppsignalFinch_#{:erlang.unique_integer([:positive])}"
+    {:ok, pid} = Finch.start_link(name: name)
+
+    try do
+      method
+      |> http_client.build(url, headers, body)
+      |> http_client.request(name, options())
+    after
+      Process.exit(pid, :normal)
+    end
   end
 
-  def transmit(url, payload \\ nil, config \\ nil) do
+  def request(method, url, headers \\ [], body \\ "") do
+    http_client = Application.get_env(:appsignal, :http_client, Finch)
+
+    method
+    |> http_client.build(url, headers, body)
+    |> http_client.request(AppsignalFinch, options())
+  end
+
+  def transmit(url, payload_and_format \\ {nil, nil}, config \\ nil)
+
+  def transmit(url, nil, config) do
+    transmit(url, {nil, nil}, config)
+  end
+
+  def transmit(url, {payload, format}, config) do
+    do_transmit(url, {payload, format}, config, false)
+  end
+
+  def transmit(url, nil, config, standalone) do
+    transmit(url, {nil, nil}, config, standalone)
+  end
+
+  def transmit(url, {payload, format}, config, standalone) do
+    do_transmit(url, {payload, format}, config, standalone)
+  end
+
+  def do_transmit(url, {payload, format}, config, standalone) do
     config = config || Appsignal.Config.config()
 
     params =
@@ -24,17 +59,28 @@ defmodule Appsignal.Transmitter do
     url = "#{url}?#{params}"
     headers = [{"Content-Type", "application/json; charset=UTF-8"}]
 
-    body =
-      if payload do
-        Jason.encode!(payload)
-      else
-        ""
-      end
+    body = encode_body(payload, format)
 
-    request(:post, url, headers, body)
+    request_fun = if standalone, do: &request_standalone/4, else: &request/4
+    request_fun.(:post, url, headers, body)
+  end
+
+  defp encode_body(nil, _), do: ""
+  defp encode_body(payload, :json), do: Jason.encode!(payload)
+
+  defp encode_body(payload, :ndjson) do
+    payload
+    |> Enum.map_join("\n", &Jason.encode!/1)
   end
 
   defp options do
+    ssl_options() ++
+      [
+        pool: :appsignal_transmitter
+      ]
+  end
+
+  defp ssl_options do
     ca_file_path = Appsignal.Config.ca_file_path()
 
     options =

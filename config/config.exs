@@ -7,7 +7,10 @@ if Mix.env() in [:bench, :test, :test_no_nif] do
   config :appsignal, appsignal: Appsignal.FakeAppsignal
   config :appsignal, appsignal_integration_logger: Appsignal.FakeIntegrationLogger
   config :appsignal, appsignal_transmitter: Appsignal.FakeTransmitter
+  config :appsignal, appsignal_checkin_scheduler: Appsignal.FakeScheduler
+  config :appsignal, appsignal_checkin_debounce: Appsignal.FakeDebounce
   config :appsignal, inet: FakeInet
+  config :appsignal, system: FakeSystem
   config :appsignal, io: FakeIO
   config :appsignal, file: FakeFile
   config :appsignal, os_internal: FakeOS
@@ -17,7 +20,9 @@ if Mix.env() in [:bench, :test, :test_no_nif] do
   config :appsignal, appsignal_span: Appsignal.Test.Span
   config :appsignal, appsignal_tracer: Appsignal.Test.Tracer
   config :appsignal, appsignal_tracer_nif: Appsignal.Test.Nif
+
   config :appsignal, deletion_delay: 100
+  config :appsignal, appsignal_checkin_heartbeat_interval_milliseconds: 10
 
   config :appsignal, :config,
     otp_app: :appsignal,

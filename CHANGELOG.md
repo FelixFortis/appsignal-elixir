@@ -1,5 +1,240 @@
 # AppSignal for Elixir changelog
 
+## 2.15.9
+
+_Published on 2025-06-18._
+
+### Changed
+
+- Allow for more customization of trace namespaces during the trace's lifetime.
+  Previously, it was not possible to customize the namespace of Absinthe traces before the Absinthe instrumentation had run.
+  This is now possible, as the Absinthe instrumentation will only set the namespace if it has not been set already.
+
+  (patch [62915710](https://github.com/appsignal/appsignal-elixir/commit/629157103edff72af0cb87382cd8f1cc6a848cda))
+
+## 2.15.8
+
+_Published on 2025-06-06._
+
+### Added
+
+- Add `nginx_port` configuration option. This configuration option can be used to customize the port on which the AppSignal integration exposes [the NGINX metrics server](https://docs.appsignal.com/metrics/nginx.html). (patch [f5c3f2c7](https://github.com/appsignal/appsignal-elixir/commit/f5c3f2c7f5f23990cfb18d6a1b54460c9f12165e))
+
+## 2.15.7
+
+_Published on 2025-05-12._
+
+### Changed
+
+- Update the `result` attribute reported for Oban jobs. Instead of it including the job's whole return value, it only contains the Oban job control value: `:ok`/`:error`/`:discard`/`:cancel`/`:snooze`.
+  The reason for a discard, cancel, error or snooze result will be stored in the new `result_reason` attribute.
+  Any `:ok` result reasons and unexpected result values are ignored. This is to avoid storing sensitive data in the attributes and to make it easier to filter by job control value in the interface.
+
+  (patch [9bf7b20a](https://github.com/appsignal/appsignal-elixir/commit/9bf7b20acfb5f823f82136fc7a6ff5613c64a1ae))
+
+## 2.15.6
+
+_Published on 2025-05-08._
+
+### Changed
+
+- Log a debug message when the reported error is ignored by the `ignore_errors` config option. (patch [6f944f6b](https://github.com/appsignal/appsignal-elixir/commit/6f944f6b3d350939fdfe922d7a8c9155374361f5))
+
+## 2.15.5
+
+_Published on 2025-05-05._
+
+### Added
+
+- Report Oban's configuration [prefix](https://hexdocs.pm/oban/Oban.Migration.html#module-isolation-with-prefixes) value, if present, as a tag in Oban job samples. Thanks to [@tfwright](https://github.com/tfwright) for suggesting and implementing this feature. (patch [9641fadf](https://github.com/appsignal/appsignal-elixir/commit/9641fadf82e87d61008158a09424ae3bbea258cc))
+
+### Changed
+
+- Remove redundant cron check-in pairs. When more than one pair of start and finish cron check-in events is reported for the same identifier in the same period, only one of them will be reported to AppSignal. (patch [e6cc5d29](https://github.com/appsignal/appsignal-elixir/commit/e6cc5d29f2beb706c92a321690cdec043809dcc6))
+
+## 2.15.4
+
+_Published on 2025-04-04._
+
+### Added
+
+- Allow keyword list configurations (patch [6c938dc6](https://github.com/appsignal/appsignal-elixir/commit/6c938dc6510b9da0c84a7dddefcf430a68b8b25b))
+
+## 2.15.3
+
+_Published on 2025-03-20._
+
+### Added
+
+- Add a mix task to check the extension install.
+
+  Run `mix appsignal.check_install` to see if the NIF and agent were successfully installed. If not, it will return with exit code 1. Use this in your CI or build step to check if AppSignal was installed correctly before deploying or starting your application.
+
+  (patch [bab913f7](https://github.com/appsignal/appsignal-elixir/commit/bab913f7dbfb0b93f8f49671e8d432192ece59f8))
+
+### Fixed
+
+- Fix an issue where the check-in scheduler would crash when failing to send a check-in due to a network error. (patch [fc55fb00](https://github.com/appsignal/appsignal-elixir/commit/fc55fb00eb352444d73c9443c53eca4543633f27))
+
+## 2.15.2
+
+_Published on 2025-03-17._
+
+### Fixed
+
+- Fix an issue where the check-in scheduler crashes upon use. (patch [20abf347](https://github.com/appsignal/appsignal-elixir/commit/20abf347521f4480a49467dfca37894fb614e426))
+
+## 2.15.1
+
+_Published on 2025-03-14._
+
+### Changed
+
+- Improve SQL sanitisation for functions and numbered placeholders. (patch [1a8251e0](https://github.com/appsignal/appsignal-elixir/commit/1a8251e083781b2741d6cbf7b188da008b6b5f74))
+
+## 2.15.0
+
+_Published on 2025-03-14._
+
+### Changed
+
+- [a622d322](https://github.com/appsignal/appsignal-elixir/commit/a622d322c53ef6606a5bd89aedcb60443c1208df) minor - Switch Hackney to Finch as the bundled HTTP client to operate within the integration
+
+## 2.14.1
+
+_Published on 2025-03-11._
+
+### Changed
+
+- Delay and eventually halt agent reboots by the extension.
+
+  The AppSignal extension is responsible for booting the AppSignal agent. If communication with the agent is lost, the extension is responsible for rebooting it.
+
+  In certain scenarios, such as when several processes with different AppSignal configurations are misconfigured to share the same working directory, the processes' extensions can enter a loop of rebooting and killing each others' agents. These short-lived agents may then attempt to repeatedly send pending payloads to AppSignal in quick succession.
+
+  This change causes the extension to delay each reboot of its agent by one additional second, and to no longer attempt to reboot the agent after the tenth reboot, slowing down and eventually breaking this loop.
+
+  (patch [4c7b8065](https://github.com/appsignal/appsignal-elixir/commit/4c7b8065393ac12565f5db85d226a307374a9f84))
+
+## 2.14.0
+
+_Published on 2025-02-24._
+
+### Changed
+
+- [f36c0ad8](https://github.com/appsignal/appsignal-elixir/commit/f36c0ad80a837fa58478b579c11275cbdb6eba6a) patch - Update bundled trusted root certificates
+
+### Removed
+
+- [55cd2b2b](https://github.com/appsignal/appsignal-elixir/commit/55cd2b2bc1bfb79d42cb82f794c03a145200ebf8) minor - Remove the OpenTelemetry beta feature in favor of the new [AppSignal collector](https://docs.appsignal.com/collector). If you are using the AppSignal agent to send OpenTelemetry data in our public beta through the `/enriched` endpoint on the agent's HTTP server, please migrate to the collector to continue using the beta. The collector has a much better implementation of this feature for the beta.
+
+### Fixed
+
+- [7edecdf2](https://github.com/appsignal/appsignal-elixir/commit/7edecdf25ada7050b61e9d660c55482af8b317db) patch - Fix an issue where the AppSignal agent fails to download during installation, by restricting the Hackney dependency to version 1.21.0 or lower.
+
+## 2.13.4
+
+_Published on 2025-02-19._
+
+### Fixed
+
+- Close instrumentation spans when an error occurs inside the `Appsignal.instrument` helper's function argument. This prevents spans and traces from not being closed properly.
+
+  This will no longer fail to close spans:
+
+  ```elixir
+  Appsignal.instrument("event name", fn -> do
+    raise "Oh no!"
+  end)
+  ```
+
+  (patch [d218b405](https://github.com/appsignal/appsignal-elixir/commit/d218b4054f7c5accb94d07d215817ddc9d0b3a3c))
+
+## 2.13.3
+
+_Published on 2024-12-20._
+
+### Fixed
+
+- Fix a performance issue when sanitising `INSERT INTO ... VALUES` queries. (patch [4d0f1c03](https://github.com/appsignal/appsignal-elixir/commit/4d0f1c03bf6e680fbbeca8eb0fb170e19d180e53))
+
+## 2.13.2
+
+_Published on 2024-11-07._
+
+### Fixed
+
+- Fix an issue where the extension fails to build on ARM64 Linux. (patch [c350f4cc](https://github.com/appsignal/appsignal-elixir/commit/c350f4cc6c7e37aefdd03db1ca3dc2bcc4ca2524))
+
+## 2.13.1
+
+_Published on 2024-11-06._
+
+### Added
+
+- Add `reported_by` tag to errors reported by the legacy error backend. This makes it easier to understand whether an error is being reported by the error backend. (patch [440e53dd](https://github.com/appsignal/appsignal-elixir/commit/440e53ddc57ad2b6e974f7cda3701b9ca44cf0d1))
+- Set the app revision config option for Scalingo deploys automatically. If the `CONTAINER_VERSION` system environment variable is present, it will use used to set the `revision` config option automatically. Overwrite it's value by configuring the `revision` config option for your application. (patch [dc86ad85](https://github.com/appsignal/appsignal-elixir/commit/dc86ad85c96ddab01a44300d9ed2131a68f4cc77))
+
+### Changed
+
+- Change the primary download mirror for integrations. (patch [f3d201c1](https://github.com/appsignal/appsignal-elixir/commit/f3d201c1b8e30fda35898780299509026d29a0af))
+
+### Fixed
+
+- Fix parentheses warning for Tesla on Elixir 1.17.x. (patch [6a62ea1a](https://github.com/appsignal/appsignal-elixir/commit/6a62ea1a86e9b203f13df78e1d1315b8d61f463e))
+- Fix an issue where, after a certain amount of time, check-ins would no longer be sent.
+
+  This issue also caused the default Hackney connection pool to be saturated, affecting other code that uses the default Hackney connection pool.
+
+  (patch [7233adfa](https://github.com/appsignal/appsignal-elixir/commit/7233adfa3b7a5fc16e523f00bbd85a42e8cbc148))
+
+## 2.13.0
+
+_Published on 2024-09-26._
+
+### Added
+
+- Add support for heartbeat check-ins.
+
+  Use the `Appsignal.CheckIn.heartbeat` method to send a single heartbeat check-in event from your application. This can be used, for example, in a `GenServer`'s callback:
+
+  ```elixir
+  @impl true
+  def handle_cast({:process_job, job}, jobs) do
+    Appsignal.CheckIn.heartbeat("job_processor")
+    {:noreply, [job | jobs], {:continue, :process_job}}
+  end
+  ```
+
+  Heartbeats are deduplicated and sent asynchronously, without blocking the current thread. Regardless of how often the `.heartbeat` method is called, at most one heartbeat with the same identifier will be sent every ten seconds.
+
+  Pass `continuous: true` as the second argument to send heartbeats continuously during the entire lifetime of the current process. This can be used, for example, during a `GenServer`'s initialisation:
+
+  ```elixir
+  @impl true
+  def init(_arg) do
+    Appsignal.CheckIn.heartbeat("my_genserver", continuous: true)
+    {:ok, nil}
+  end
+  ```
+
+  You can also use `Appsignal.CheckIn.Heartbeat` as a supervisor's child process, in order for heartbeats to be sent continuously during the lifetime of the supervisor. This can be used, for example, during an `Application`'s start:
+
+  ```elixir
+  @impl true
+  def start(_type, _args) do
+    Supervisor.start_link([
+      {Appsignal.CheckIn.Heartbeat, "my_application"}
+    ], strategy: :one_for_one, name: MyApplication.Supervisor)
+  end
+  ```
+
+  (minor [7b2ff327](https://github.com/appsignal/appsignal-elixir/commit/7b2ff327b7f915a7245c4ad6f4dfd0f3c6b13ff5))
+
+### Changed
+
+- Send check-ins concurrently. When calling `Appsignal.CheckIn.cron`, instead of blocking the current process while the check-in events are sent, schedule them to be sent in a separate process. (patch [e7cead98](https://github.com/appsignal/appsignal-elixir/commit/e7cead9880d537f384e64f85330db819d1d66148))
+
 ## 2.12.3
 
 _Published on 2024-08-26._

@@ -22,6 +22,7 @@ defmodule Mix.Tasks.Appsignal.Diagnose do
       end
 
     Application.load(:appsignal)
+    Application.ensure_started(:telemetry)
 
     report = %{process: %{uid: @system.uid()}}
 
@@ -409,7 +410,7 @@ defmodule Mix.Tasks.Appsignal.Diagnose do
 
       {:error, %{reason: reason}} ->
         IO.puts("  Error: Something went wrong while submitting the report to AppSignal.")
-        IO.puts(reason)
+        IO.puts(inspect(reason))
     end
   end
 

@@ -181,42 +181,42 @@ defmodule Appsignal.Config do
 
   def minutely_probes_enabled? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :enable_minutely_probes, false)
+      {:ok, value} -> !!Access.get(value, :enable_minutely_probes, false)
       _ -> false
     end
   end
 
   def error_backend_enabled? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :enable_error_backend, false)
+      {:ok, value} -> !!Access.get(value, :enable_error_backend, false)
       _ -> false
     end
   end
 
   def instrument_ecto? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :instrument_ecto, true)
+      {:ok, value} -> !!Access.get(value, :instrument_ecto, true)
       _ -> true
     end
   end
 
   def instrument_finch? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :instrument_finch, true)
+      {:ok, value} -> !!Access.get(value, :instrument_finch, true)
       _ -> true
     end
   end
 
   def instrument_oban? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :instrument_oban, true)
+      {:ok, value} -> !!Access.get(value, :instrument_oban, true)
       _ -> true
     end
   end
 
   def instrument_tesla? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :instrument_tesla, true)
+      {:ok, value} -> !!Access.get(value, :instrument_tesla, true)
       _ -> true
     end
   end
@@ -252,7 +252,7 @@ defmodule Appsignal.Config do
 
   def instrument_absinthe? do
     case Application.fetch_env(:appsignal, :config) do
-      {:ok, value} -> !!Map.get(value, :instrument_absinthe, true)
+      {:ok, value} -> !!Access.get(value, :instrument_absinthe, true)
       _ -> true
     end
   end
@@ -324,6 +324,7 @@ defmodule Appsignal.Config do
     "APPSIGNAL_LOG_LEVEL" => :log_level,
     "APPSIGNAL_LOG_PATH" => :log_path,
     "APPSIGNAL_LOGGING_ENDPOINT" => :logging_endpoint,
+    "APPSIGNAL_NGINX_PORT" => :nginx_port,
     "APPSIGNAL_OTP_APP" => :otp_app,
     "APPSIGNAL_PUSH_API_ENDPOINT" => :endpoint,
     "APPSIGNAL_PUSH_API_KEY" => :push_api_key,
@@ -346,7 +347,7 @@ defmodule Appsignal.Config do
     APPSIGNAL_APP_NAME APPSIGNAL_PUSH_API_KEY APPSIGNAL_PUSH_API_ENDPOINT APPSIGNAL_FRONTEND_ERROR_CATCHING_PATH
     APPSIGNAL_HOSTNAME APPSIGNAL_HOST_ROLE APPSIGNAL_HTTP_PROXY APPSIGNAL_LOG APPSIGNAL_LOG_LEVEL APPSIGNAL_LOG_PATH
     APPSIGNAL_LOGGING_ENDPOINT APPSIGNAL_WORKING_DIR_PATH APPSIGNAL_WORKING_DIRECTORY_PATH APPSIGNAL_CA_FILE_PATH
-    APPSIGNAL_DIAGNOSE_ENDPOINT APP_REVISION APPSIGNAL_REPORT_OBAN_ERRORS APPSIGNAL_STATSD_PORT
+    APPSIGNAL_DIAGNOSE_ENDPOINT APP_REVISION APPSIGNAL_REPORT_OBAN_ERRORS APPSIGNAL_STATSD_PORT APPSIGNAL_NGINX_PORT
     APPSIGNAL_BIND_ADDRESS
   )
   @bool_keys ~w(
@@ -486,6 +487,7 @@ defmodule Appsignal.Config do
     Nif.env_put("_APPSIGNAL_SEND_PARAMS", to_string(config[:send_params]))
     Nif.env_put("_APPSIGNAL_SEND_SESSION_DATA", to_string(config[:send_session_data]))
     Nif.env_put("_APPSIGNAL_STATSD_PORT", to_string(config[:statsd_port]))
+    Nif.env_put("_APPSIGNAL_NGINX_PORT", to_string(config[:nginx_port]))
     Nif.env_put("_APPSIGNAL_RUNNING_IN_CONTAINER", to_string(config[:running_in_container]))
     Nif.env_put("_APPSIGNAL_TRANSACTION_DEBUG_MODE", to_string(config[:transaction_debug_mode]))
     Nif.env_put("_APPSIGNAL_WORKING_DIRECTORY_PATH", to_string(config[:working_directory_path]))

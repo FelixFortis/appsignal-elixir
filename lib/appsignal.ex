@@ -47,7 +47,9 @@ defmodule Appsignal do
     children = [
       {Appsignal.Tracer, []},
       {Appsignal.Monitor, []},
-      {Appsignal.Probes, []}
+      {Appsignal.Probes, []},
+      {Appsignal.CheckIn.Scheduler, []},
+      {Finch, name: AppsignalFinch}
     ]
 
     result = Supervisor.start_link(children, strategy: :one_for_one, name: Appsignal.Supervisor)

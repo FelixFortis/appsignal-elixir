@@ -123,6 +123,24 @@ defmodule Appsignal.ObanTest do
     end
   end
 
+  describe "oban_job_start/4, with a :conf metadata key (v2.4.0)" do
+    test "sets the prefix as a span tag if present" do
+      execute_job_start(%{
+        conf: sample_conf(prefix: "foo")
+      })
+
+      assert attribute?("prefix", "foo")
+    end
+
+    test "does not set the prefix as a span tag if not present" do
+      execute_job_start(%{
+        conf: sample_conf()
+      })
+
+      assert !has_attribute?("prefix")
+    end
+  end
+
   describe "oban_job_stop/4" do
     setup do
       fake_appsignal = start_supervised!(FakeAppsignal)
@@ -216,17 +234,37 @@ defmodule Appsignal.ObanTest do
     end
   end
 
-  describe "oban_job_stop/4, with a :result metadata key (v2.5.0)" do
-    setup do
-      execute_job_start()
-
-      execute_job_stop(%{
-        result: {:ok, 42}
-      })
-    end
-
+  describe "oban_job_stop/4, with a :result metadata value (v2.5.0)" do
     test "sets the result attribute" do
-      assert attribute?("result", "{:ok, 42}")
+      [
+        {:ok, "ok", nil},
+        {:discard, "discard", nil},
+        {{:cancel, "cancel reason"}, "cancel", "cancel reason"},
+        {{:discard, "discard reason"}, "discard", "discard reason"},
+        {{:ok, "something"}, "ok", nil},
+        {{:error, "error reason"}, "error", "error reason"},
+        {{:snooze, 1_001}, "snooze", "1001"},
+
+        # Testing some non-string values and their conversions into strings
+        {{:cancel, :my_reason}, "cancel", "my_reason"},
+        {{:cancel, true}, "cancel", "true"},
+        {{:cancel, false}, "cancel", "false"},
+        {{:cancel, -12.35}, "cancel", "-12.35"},
+        {{:cancel, [abc: :def]}, "cancel", "[abc: :def]"},
+        {{:cancel, 0..255}, "cancel", "0..255"},
+        {"other value", "ok", nil}
+      ]
+      |> Enum.each(fn {return_value, expected_value, expected_reason} ->
+        execute_job_start()
+
+        execute_job_stop(%{result: return_value})
+
+        assert attribute?("result", expected_value)
+
+        if expected_reason do
+          assert attribute?("result_reason", expected_reason)
+        end
+      end)
     end
   end
 
@@ -681,5 +719,28 @@ defmodule Appsignal.ObanTest do
         worker: :"Test.Worker"
       }
     }
+  end
+
+  defp sample_conf(opts \\ []) do
+    Appsignal.ObanTest.ObanConfig.new(opts)
+  end
+end
+
+# A struct that emulates the `Oban.Config` struct:
+# https://github.com/oban-bg/oban/blob/8b0aada8b2bdbe7a338c34c87a5f3c079e9800ad/lib/oban/config.ex#L32-L47
+defmodule Appsignal.ObanTest.ObanConfig do
+  @moduledoc false
+
+  defstruct prefix: false
+
+  # A subset of `Oban.Config`'s typing:
+  # https://hexdocs.pm/oban/Oban.Config.html#t:t/0
+  @type t :: %__MODULE__{
+          prefix: false | String.t()
+        }
+
+  @doc false
+  def new(opts) do
+    struct!(__MODULE__, opts)
   end
 end
